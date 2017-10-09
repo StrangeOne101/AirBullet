@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 
+import com.projectkorra.projectkorra.GeneralMethods;
 import com.projectkorra.projectkorra.ProjectKorra;
 import com.projectkorra.projectkorra.ability.AddonAbility;
 import com.projectkorra.projectkorra.ability.AirAbility;
@@ -15,16 +16,19 @@ import com.projectkorra.projectkorra.configuration.ConfigManager;
 public class AirBullets extends AirAbility implements AddonAbility {
 	
 	private boolean charged = false;
-	private long chargeTime = 3000L;
+	private static long chargeTime = 3000L;
 	private int bullets = 0;
-	private int maxBullets = 3;
-	private long cooldown = 5000L;
+	private static int maxBullets = 3;
+	private static long cooldown = 5000L;
+	public static long fireCooldown = 200L;
 	
 	public AirBullets(Player player) {
 		super(player);
 		
 		if (CoreAbility.hasAbility(player, this.getClass())) {
+			if (bPlayer.isOnCooldown("AirBulletBullet")) return;
 			AirBullets ability = CoreAbility.getAbility(player, this.getClass());
+			if (!ability.charged) return;
 			ability.bullets++;
 			
 			new AirBullet(player);
@@ -33,7 +37,7 @@ public class AirBullets extends AirAbility implements AddonAbility {
 				ability.remove();
 				ability.bPlayer.addCooldown(ability);
 			}
-		} else if (player.isSneaking()) {
+		} else {
 			start();
 		}
 	}
@@ -71,7 +75,11 @@ public class AirBullets extends AirAbility implements AddonAbility {
 		}
 		
 		if (!charged) {
-			if (this.getStartTime() + this.chargeTime < System.currentTimeMillis()) {
+			if (!player.isSneaking()) {
+				remove();
+				return;
+			}
+			if (this.getStartTime() + chargeTime < System.currentTimeMillis()) {
 				charged = true;
 			}
 			
@@ -79,7 +87,9 @@ public class AirBullets extends AirAbility implements AddonAbility {
 		}
 		
 		if (charged) {
-			//
+			AirAbility.getAirbendingParticles().display(GeneralMethods.getRightSide(player.getLocation(), 0.55D).add(0, 1.2D, 0).toVector()
+					.add(player.getEyeLocation().getDirection().clone().multiply(0.8D)).toLocation(player.getWorld()), 0, 0,
+					0, 0.00F, 3);
 		}
 
 	}
@@ -103,13 +113,17 @@ public class AirBullets extends AirAbility implements AddonAbility {
 		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101." + getName() + ".ChargeTime", chargeTime);
 		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101." + getName() + ".Damage", AirBullet.damage);
 		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101." + getName() + ".MaxBullets", maxBullets);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101." + getName() + ".MoveSpeed", AirBullet.moveSpeed);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101." + getName() + ".FireBulletCooldown", fireCooldown);
 		
 		
 		cooldown = ConfigManager.defaultConfig.get().getLong("ExtraAbilities.StrangeOne101." + getName() + ".Cooldown");
+		fireCooldown = ConfigManager.defaultConfig.get().getLong("ExtraAbilities.StrangeOne101." + getName() + ".FireBulletCooldown");
 		chargeTime = ConfigManager.defaultConfig.get().getLong("ExtraAbilities.StrangeOne101." + getName() + ".ChargeTime");
 		maxBullets = ConfigManager.defaultConfig.get().getInt("ExtraAbilities.StrangeOne101." + getName() + ".MaxBullets");
 		AirBullet.range = ConfigManager.defaultConfig.get().getDouble("ExtraAbilities.StrangeOne101." + getName() + ".Range");
 		AirBullet.damage = ConfigManager.defaultConfig.get().getDouble("ExtraAbilities.StrangeOne101." + getName() + ".Damage");
+		AirBullet.moveSpeed = ConfigManager.defaultConfig.get().getDouble("ExtraAbilities.StrangeOne101." + getName() + ".MoveSpeed");
 		
 		ConfigManager.defaultConfig.save();
 		
